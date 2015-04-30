@@ -1349,6 +1349,33 @@ func (s *Server) postContainerExecCreate(version version.Version, w http.Respons
 	})
 }
 
+func (s *Server) postContainersSet(version version.Version, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	if vars == nil {
+		return fmt.Errorf("Missing parameter")
+	}
+	if err := parseForm(r); err != nil {
+		return err
+	}
+	if err := checkForJson(r); err != nil {
+		return err
+	}
+
+	name := vars["name"]
+	_, hostConfig, err := runconfig.DecodeContainerConfig(r.Body)
+	if err != nil {
+		return err
+	}
+
+	warnings, err := s.daemon.ContainerSet(name, hostConfig)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, &types.ContainerSetResponse{
+		Warnings: warnings,
+	})
+}
+
 // TODO(vishh): Refactor the code to avoid having to specify stream config as part of both create and start.
 func (s *Server) postContainerExecStart(version version.Version, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	if err := parseForm(r); err != nil {
@@ -1542,6 +1569,7 @@ func createRouter(s *Server) *mux.Router {
 			"/containers/{name:.*}/attach":  s.postContainersAttach,
 			"/containers/{name:.*}/copy":    s.postContainersCopy,
 			"/containers/{name:.*}/exec":    s.postContainerExecCreate,
+			"/containers/{name:.*}/set":     s.postContainersSet,
 			"/exec/{name:.*}/start":         s.postContainerExecStart,
 			"/exec/{name:.*}/resize":        s.postContainerExecResize,
 			"/containers/{name:.*}/rename":  s.postContainerRename,

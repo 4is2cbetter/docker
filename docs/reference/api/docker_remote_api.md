@@ -95,6 +95,12 @@ are now returned as boolean instead of as an int.
 In addition, the end point now returns the new boolean fields
 `CpuCfsPeriod`, `CpuCfsQuota`, and `OomKillDisable`.
 
+`POST /containers/(id)/set`
+
+**New!**
+Resource configs can be updated after containers are created.
+>>>>>>> Implemet docker set command
+
 ## v1.18
 
 ### Full documentation
