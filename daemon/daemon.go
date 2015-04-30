@@ -129,6 +129,7 @@ func (daemon *Daemon) Install(eng *engine.Engine) error {
 		"pause":             daemon.ContainerPause,
 		"resize":            daemon.ContainerResize,
 		"restart":           daemon.ContainerRestart,
+		"set":               daemon.ContainerSet,
 		"start":             daemon.ContainerStart,
 		"stop":              daemon.ContainerStop,
 		"top":               daemon.ContainerTop,
@@ -520,6 +521,34 @@ func (daemon *Daemon) generateIdAndName(name string) (string, string, error) {
 	}
 
 	return id, name, nil
+}
+
+func (daemon *Daemon) verifyHostConfig(hostConfig *runconfig.HostConfig) ([]string, error) {
+	var warnings []string
+
+	if hostConfig == nil {
+		return warnings, nil
+	}
+
+	if hostConfig.Memory != 0 && hostConfig.Memory < 4194304 {
+		return warnings, fmt.Errorf("Minimum memory limit allowed is 4MB")
+	}
+	if hostConfig.Memory > 0 && !daemon.SystemConfig().MemoryLimit {
+		warnings = append(warnings, "Your kernel does not support memory limit capabilities. Limitation discarded.")
+		hostConfig.Memory = 0
+	}
+	if hostConfig.Memory > 0 && hostConfig.MemorySwap != -1 && !daemon.SystemConfig().SwapLimit {
+		warnings = append(warnings, "Your kernel does not support swap limit capabilities, memory limited without swap.")
+		hostConfig.MemorySwap = -1
+	}
+	if hostConfig.Memory > 0 && hostConfig.MemorySwap > 0 && hostConfig.MemorySwap < hostConfig.Memory {
+		return warnings, fmt.Errorf("Minimum memoryswap limit should be larger than memory limit, see usage.")
+	}
+	if hostConfig.Memory == 0 && hostConfig.MemorySwap > 0 {
+		return warnings, fmt.Errorf("You should always set the Memory limit when using Memoryswap limit, see usage.")
+	}
+
+	return warnings, nil
 }
 
 func (daemon *Daemon) reserveName(id, name string) (string, error) {
@@ -1119,6 +1148,10 @@ func (daemon *Daemon) Kill(c *Container, sig int) error {
 
 func (daemon *Daemon) Stats(c *Container) (*execdriver.ResourceStats, error) {
 	return daemon.execDriver.Stats(c.ID)
+}
+
+func (daemon *Daemon) Set(c *execdriver.Command) error {
+	return daemon.execDriver.Set(c)
 }
 
 func (daemon *Daemon) SubscribeToContainerStats(name string) (chan interface{}, error) {

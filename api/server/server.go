@@ -1177,6 +1177,32 @@ func postContainerExecCreate(eng *engine.Engine, version version.Version, w http
 	return writeJSONEnv(w, http.StatusCreated, out)
 }
 
+func postContainersSet(eng *engine.Engine, version version.Version, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	if vars == nil {
+		return fmt.Errorf("Missing parameter")
+	}
+	if err := parseForm(r); err != nil {
+		return err
+	}
+	if err := checkForJson(r); err != nil {
+		return err
+	}
+
+	name := vars["name"]
+	job := eng.Job("set", name)
+	job.Setenv("Memory", r.FormValue("memory"))
+	job.Setenv("CpusetCpus", r.FormValue("cpusetcpus"))
+	job.Setenv("CpuShares", r.FormValue("cpushares"))
+	job.Setenv("MemorySwap", r.FormValue("memswap"))
+
+	if err := job.Run(); err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
 // TODO(vishh): Refactor the code to avoid having to specify stream config as part of both create and start.
 func postContainerExecStart(eng *engine.Engine, version version.Version, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	if err := parseForm(r); err != nil {
@@ -1370,6 +1396,7 @@ func createRouter(eng *engine.Engine, logging, enableCors bool, corsHeaders stri
 			"/containers/{name:.*}/attach":  postContainersAttach,
 			"/containers/{name:.*}/copy":    postContainersCopy,
 			"/containers/{name:.*}/exec":    postContainerExecCreate,
+			"/containers/{name:.*}/set":     postContainersSet,
 			"/exec/{name:.*}/start":         postContainerExecStart,
 			"/exec/{name:.*}/resize":        postContainerExecResize,
 			"/containers/{name:.*}/rename":  postContainerRename,

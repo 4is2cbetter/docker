@@ -38,6 +38,12 @@ Calling `/info` is the same as calling
 You can still call an old version of the API using
 `/v1.17/info`.
 
+`POST /containers/(id)/set`
+
+**New!**
+Resource configs can be updated after containers are created.
+>>>>>>> Implemet docker set command
+
 ## v1.18
 
 ### Full Documentation

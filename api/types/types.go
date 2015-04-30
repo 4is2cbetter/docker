@@ -9,3 +9,9 @@ type ContainerCreateResponse struct {
 	// Warnings are any warnings encountered during the creation of the container.
 	Warnings []string `json:"Warnings"`
 }
+
+// POST /containers/{name:.*}/set
+type ContainerSetResponse struct {
+	// Warnings are any warnings encountered during the execution of the command.
+	Warnings []string `json:"Warnings"`
+}

@@ -2852,7 +2852,7 @@ func (cli *DockerCli) CmdStats(args ...string) error {
 	if len(errs) > 0 {
 		return fmt.Errorf("%s", strings.Join(errs, ", "))
 	}
-	for _ = range time.Tick(500 * time.Millisecond) {
+	for range time.Tick(500 * time.Millisecond) {
 		printHeader()
 		toRemove := []int{}
 		for i, s := range cStats {
@@ -2885,4 +2885,60 @@ func calculateCpuPercent(previousCpu, previousSystem uint64, v *types.Stats) flo
 		cpuPercent = (cpuDelta / systemDelta) * float64(len(v.CpuStats.CpuUsage.PercpuUsage)) * 100.0
 	}
 	return cpuPercent
+}
+
+func (cli *DockerCli) CmdSet(args ...string) error {
+	cmd := cli.Subcmd("set", "CONTAINER [CONTAINER...]", "Setup/Update resource configs for a container", true)
+	flCpusetCpus := cmd.String([]string{"-cpuset-cpus"}, "", "CPUs in which to allow execution (0-3, 0,1)")
+	flCpuShares := cmd.Int64([]string{"c", "-cpu-shares"}, 0, "CPU shares (relative weight)")
+	flMemoryString := cmd.String([]string{"m", "-memory"}, "", "Memory limit")
+	flMemorySwap := cmd.String([]string{"-memory-swap"}, "", "Total memory (memory + swap), '-1' to disable swap")
+	cmd.Require(flag.Min, 1)
+
+	utils.ParseFlags(cmd, args, true)
+
+	var flMemory int64
+	if *flMemoryString != "" {
+		parsedMemory, err := units.RAMInBytes(*flMemoryString)
+		if err != nil {
+			return err
+		}
+		flMemory = parsedMemory
+	}
+
+	var MemorySwap int64
+	if *flMemorySwap != "" {
+		if *flMemorySwap == "-1" {
+			MemorySwap = -1
+		} else {
+			parsedMemorySwap, err := units.RAMInBytes(*flMemorySwap)
+			if err != nil {
+				return err
+			}
+			MemorySwap = parsedMemorySwap
+		}
+	}
+
+	v := &url.Values{}
+	v.Set("cpusetcpus", *flCpusetCpus)
+	v.Set("cpushares", strconv.FormatInt(*flCpuShares, 10))
+	v.Set("memory", strconv.FormatInt(flMemory, 10))
+	v.Set("memswap", strconv.FormatInt(MemorySwap, 10))
+
+	headers := http.Header(make(map[string][]string))
+	headers.Set("Content-Type", "application/json")
+
+	names := cmd.Args()
+	var encounteredError error
+	for _, name := range names {
+		_, _, err := readBody(cli.call("POST", fmt.Sprintf("/containers/%s/set?%s", name, v.Encode()), nil, headers))
+		if err != nil {
+			fmt.Fprintf(cli.err, "Error trying to set properties of container (%s): %s\n", name, err)
+			encounteredError = fmt.Errorf("Error: failed to set one or more containers")
+		} else {
+			fmt.Fprintf(cli.out, "%s\n", name)
+		}
+	}
+
+	return encounteredError
 }

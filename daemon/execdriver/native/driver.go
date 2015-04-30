@@ -260,6 +260,23 @@ func (d *driver) Pause(c *execdriver.Command) error {
 	return active.Pause()
 }
 
+func (d *driver) Set(c *execdriver.Command) error {
+	cont := d.activeContainers[c.ID]
+	if cont == nil {
+		return fmt.Errorf("active container for %s does not exist", c.ID)
+	}
+	config := cont.Config()
+	if err := execdriver.SetupCgroups(&config, c); err != nil {
+		return err
+	}
+
+	if err := cont.Set(config); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d *driver) Unpause(c *execdriver.Command) error {
 	active := d.activeContainers[c.ID]
 	if active == nil {
