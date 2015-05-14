@@ -81,7 +81,7 @@ unix://[/path/to/socket] to use.
   Default IP address to use when binding container ports. Default is `0.0.0.0`.
 
 **--ip-forward**=*true*|*false*
-  Docker will enable IP forwarding. Default is true. If `--fixed-cidr-v6` is set. IPv6 forwarding will be activated, too. This may reject Router Advertisements and interfere with the host's existing IPv6 configuration. For more information please consult the documentation about "Advanced Networking - IPv6".
+  Docker will enable IP forwarding. Default is true. If it's set as false, Docker will leave `ip-forward` as it was, not disable it. `--fixed-cidr-v6` is set. IPv6 forwarding will be activated, too. This may reject Router Advertisements and interfere with the host's existing IPv6 configuration. For more information please consult the documentation about "Advanced Networking - IPv6".
 
 **--ip-masq**=*true*|*false*
   Enable IP masquerading for bridge's IP range. Default is true.
