@@ -23,6 +23,9 @@ if ! command -v zgrep &> /dev/null; then
 	}
 fi
 
+kernelMajor=$(uname -r | awk -F. '{print $1}')
+kernelMinor=$(uname -r | awk -F. '{print $2}')
+
 is_set() {
 	zgrep "CONFIG_$1=[y|m]" "$CONFIG" > /dev/null
 }
@@ -182,8 +185,12 @@ echo 'Optional Features:'
 		echo "    $(wrap_color '(note that cgroup swap accounting is not enabled in your kernel config, you can enable it by setting boot option "swapaccount=1")' bold black)"
 	fi
 }
+
+if [ "$kernelMajor" -lt 3 ] || [ "$kernelMajor" -eq 3 -a "$kernelMinor" -le 18 ]; then
+	check_flags RESOURCE_COUNTERS
+fi
+
 flags=(
-	RESOURCE_COUNTERS
 	BLK_CGROUP
 	IOSCHED_CFQ
 	CGROUP_PERF
